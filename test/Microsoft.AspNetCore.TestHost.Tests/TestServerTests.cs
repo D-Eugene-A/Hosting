@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Testing.xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DiagnosticAdapter;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Net.Http.Headers;
 using Xunit;
@@ -23,6 +24,56 @@ namespace Microsoft.AspNetCore.TestHost
 {
     public class TestServerTests
     {
+        [Fact]
+        public async Task GenericRawCreate()
+        {
+            var server = new TestServer();
+            var host = new HostBuilder()
+                .ConfigureWebHost(webBuilder =>
+                {
+                    webBuilder
+                        .UseServer(server)
+                        .Configure(app => { });
+                })
+                .Build();
+            await host.StartAsync();
+
+            var response = await server.CreateClient().GetAsync("/");
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GenericCreateAndStartServer()
+        {
+            var server = await new HostBuilder()
+                .ConfigureWebHost(webBuilder => webBuilder.Configure(app => { }))
+                .StartTestServerAsync();
+
+            var response = await server.CreateClient().GetAsync("/");
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
+        [Fact]
+        public async Task GenericCreateAndStartServerWithoutWebHost_Throws()
+        {
+            var server = await new HostBuilder()
+                .StartTestServerAsync();
+
+            var ex = Assert.Throws<InvalidOperationException>(() => server.CreateClient());
+            Assert.Equal("The server has not been started or no web application was configured.", ex.Message);
+        }
+
+        [Fact]
+        public async Task GenericCreateAndStartHost()
+        {
+            var host = await new HostBuilder()
+                .ConfigureWebHost(webBuilder => webBuilder.Configure(app => { }))
+                .StartTestHostAsync();
+
+            var response = await host.GetTestClient().GetAsync("/");
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        }
+
         [Fact]
         public void CreateWithDelegate()
         {
